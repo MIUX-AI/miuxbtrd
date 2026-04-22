@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MIUX AI TRADER v4</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="auth-overlay" style="display:none;position:fixed;inset:0;background:rgba(6,10,16,.82);backdrop-filter:blur(4px);z-index:9999;padding:24px">
+  <div class="card card-cyan" style="max-width:420px;margin:10vh auto 0 auto">
+    <h2 class="section-title mb3">🔐 Dashboard Login</h2>
+    <p id="auth-message" style="color:var(--t3);font-size:12px;margin-bottom:12px">Enter dashboard password to unlock the dashboard.</p>
+    <input type="password" id="login-password" placeholder="Dashboard password" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--t1)">
+    <div class="flex ac gap8" style="margin-top:12px">
+      <button class="btn btn-g" onclick="login()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="logo">MIUX<span>AI</span></div>
+  <span id="mode-badge" class="badge b-lime">PAPER</span>
+  <span id="status-badge" class="badge b-muted">IDLE</span>
+  <span id="ws-badge" class="badge ws-off">WS OFF</span>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="nav('dash')">⊞ Dashboard</button>
+    <button class="nav-btn" onclick="nav('scanner')">◎ Scanner</button>
+    <button class="nav-btn" onclick="nav('positions')">◈ Positions</button>
+    <button class="nav-btn" onclick="nav('portfolio')">◑ Portfolio</button>
+    <button class="nav-btn" onclick="nav('ai')">⟳ AI Log</button>
+    <button class="nav-btn" onclick="nav('btc')">₿ BTC Vault</button>
+    <button class="nav-btn" onclick="nav('memory')">◉ Memory</button>
+    <button class="nav-btn" onclick="nav('settings')">⚙ Settings</button>
+  </nav>
+  <div class="ml-auto flex ac gap8">
+    <button class="btn btn-c btn-sm" onclick="triggerScan()">⚡ SCAN</button>
+    <button id="auto-btn" class="btn btn-g btn-sm" onclick="toggleAuto()">▶ AUTO</button>
+    <button id="kill-btn" class="btn btn-r btn-sm" onclick="ctrl('toggle_kill')">⛔ KILL</button>
+  </div>
+</div>
+
+<!-- Ticker Bar -->
+<div class="ticker-bar" id="ticker-bar">Waiting for prices...</div>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <div id="page-dash" class="page active">
+    <div class="stats-row" id="dash-stats"></div>
+    <div class="grid2">
+      <div>
+        <div class="card card-lime mb4">
+          <div class="flex jb ac mb3">
+            <h2 class="section-title">🔥 Live Signals</h2>
+            <span id="scan-time" class="text-muted"></span>
+          </div>
+          <div id="signals-list">Waiting for scan...</div>
+        </div>
+        <div class="card mb4">
+          <div class="flex jb ac mb3">
+            <h2 class="section-title">◈ Open Positions</h2>
+            <span id="pos-count" class="badge b-muted">0</span>
+          </div>
+          <div id="dash-positions"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card card-cyan mb4">
+          <div class="flex jb ac mb3">
+            <h2 class="section-title">🧠 AI Status</h2>
+            <span id="ai-provider-badge" class="badge b-lime">-</span>
+          </div>
+          <div id="ai-status-panel"></div>
+        </div>
+        <div class="card card-gold mb4">
+          <div class="flex jb ac mb3">
+            <h2 class="section-title">🌐 Macro</h2>
+            <button class="btn btn-sm" onclick="ctrl('update_macro')">↻</button>
+          </div>
+          <div id="macro-panel"></div>
+        </div>
+        <div class="card">
+          <h2 class="section-title mb3">◉ Market Regime</h2>
+          <div id="regime-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCANNER -->
+  <div id="page-scanner" class="page">
+    <div class="flex jb ac mb4">
+      <h2 class="section-title">◎ Market Scanner</h2>
+      <button class="btn btn-g" onclick="triggerScan()">⚡ Force Scan</button>
+    </div>
+    <div id="scanner-grid"></div>
+  </div>
+
+  <!-- POSITIONS -->
+  <div id="page-positions" class="page">
+    <div class="flex jb ac mb4">
+      <h2 class="section-title">◈ Open Positions</h2>
+    </div>
+    <div id="positions-list"></div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div id="page-portfolio" class="page">
+    <div class="grid2 mb4">
+      <div class="card card-lime">
+        <h2 class="section-title mb3">💼 Portfolio Overview</h2>
+        <div id="portfolio-overview"></div>
+      </div>
+      <div class="card card-gold">
+        <h2 class="section-title mb3">₿ BTC Treasury</h2>
+        <div id="btc-mini-panel"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="section-title mb3">📊 Allocation Buckets</h2>
+      <div id="alloc-detail"></div>
+    </div>
+  </div>
+
+  <!-- AI LOG -->
+  <div id="page-ai" class="page">
+    <div class="flex jb ac mb4">
+      <h2 class="section-title">⟳ AI Decision Log</h2>
+      <button class="btn btn-sm" onclick="loadDecisions()">↻ Refresh</button>
+    </div>
+    <div id="ai-log-list"></div>
+  </div>
+
+  <!-- BTC VAULT -->
+  <div id="page-btc" class="page">
+    <div class="card card-gold mb4">
+      <h2 class="section-title mb3">₿ BTC Accumulation Vault</h2>
+      <div id="btc-vault-panel"></div>
+    </div>
+    <div class="card mb4">
+      <h2 class="section-title mb3">📈 DCA Strategy</h2>
+      <div id="dca-panel"></div>
+    </div>
+    <button class="btn btn-gold" onclick="ctrl('trigger_dca')">₿ Run DCA Now</button>
+  </div>
+
+  <!-- MEMORY -->
+  <div id="page-memory" class="page">
+    <div class="grid2 mb4">
+      <div class="card">
+        <h2 class="section-title mb3">◉ Learning Stats</h2>
+        <div id="memory-stats"></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title mb3">📉 Loss Patterns</h2>
+        <div id="memory-patterns"></div>
+      </div>
+    </div>
+    <div class="card mb4">
+      <h2 class="section-title mb3">🏆 Strategy Performance</h2>
+      <div id="strategy-perf"></div>
+    </div>
+    <button class="btn btn-c" onclick="ctrl('trigger_learning')">🧠 Update Memory</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="page-settings" class="page">
+    <div class="grid2">
+      <div class="card mb4">
+        <h2 class="section-title mb3">⚙ Trading Mode</h2>
+        <div class="mode-btns">
+          <button class="btn btn-sm" id="mode-btn-paper"          onclick="setMode('paper')">📄 PAPER</button>
+          <button class="btn btn-sm" id="mode-btn-analysis"       onclick="setMode('analysis')">🔭 ANALYSIS</button>
+          <button class="btn btn-sm" id="mode-btn-safe"           onclick="setMode('safe')">🛡 SAFE</button>
+          <button class="btn btn-sm" id="mode-btn-live_testnet"   onclick="setMode('live_testnet')">🟡 LIVE DEMO</button>
+          <button class="btn btn-sm" id="mode-btn-live_mainnet"   onclick="setMode('live_mainnet')">🔴 LIVE MAINNET</button>
+        </div>
+      </div>
+      <div class="card mb4">
+        <h2 class="section-title mb3">🔐 Session & Risk</h2>
+        <div class="metric-row">
+          <span>Session</span>
+          <span id="auth-session-status">Locked</span>
+        </div>
+        <div class="metric-row">
+          <span>Auth</span>
+          <span>HttpOnly cookie</span>
+        </div>
+        <button class="btn btn-sm" style="margin-top:8px" onclick="logout()">Logout</button>
+        <div style="margin-top:12px">
+          <button class="btn btn-sm btn-warn" onclick="ctrl('reset_cooldown')">⚡ Reset Cooldown</button>
+        </div>
+      </div>
+      <div class="card mb4">
+        <h2 class="section-title mb3">🌐 Binance</h2>
+        <div id="binance-settings-card"></div>
+        <button class="btn btn-c btn-sm" style="margin-top:8px" onclick="ctrl('binance_sync')">🔄 Sync Now</button>
+      </div>
+      <div class="card">
+        <h2 class="section-title mb3">🤖 AI Providers</h2>
+        <div id="ai-providers-panel"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
